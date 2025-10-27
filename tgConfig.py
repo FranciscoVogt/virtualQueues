@@ -64,7 +64,7 @@ p = testutils.simple_eth_packet(pktlen=pktlen)
 
 # Configure the packet generation timer application
 print("configure pktgen application")
-data = pktgen_app_cfg_table.make_data([gc.DataTuple('timer_nanosec', 10000),
+data = pktgen_app_cfg_table.make_data([gc.DataTuple('timer_nanosec', 1000000000),
                                 gc.DataTuple('app_enable', bool_val=False),
                                 gc.DataTuple('pkt_len', (pktlen - 6)),
                                 gc.DataTuple('pkt_buffer_offset', buff_offset),

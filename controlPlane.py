@@ -8,6 +8,6 @@ vq_table = p4.SwitchIngress.getQueueLimit
 
 fwd_table.add_with_send(dst_addr = IPAddress('192.168.0.2'), port = 164, id = 5)
 
-vq_table.add_with_qLimit(qID = 5, limit = 1000000)
+vq_table.add_with_qLimit(qID = 5, limit = 100)
 
 bfrt.complete_operations()
