@@ -1,4 +1,4 @@
-#from netaddr import IPAddress
+from netaddr import IPAddress
 p4 = bfrt.vQueues.pipe
 
 fwd_table = p4.SwitchIngress.forward
