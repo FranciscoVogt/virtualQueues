@@ -67,6 +67,7 @@ header arp_h {
 }
 
 struct headers {
+    pktgen_timer_header_t timer;
     ethernet_h   ethernet;
     vlan_tag_h   vlan_tag;
     ipv4_h       ipv4;
