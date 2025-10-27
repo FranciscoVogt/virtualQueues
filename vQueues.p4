@@ -71,8 +71,6 @@ struct headers {
     ethernet_h   ethernet;
     vlan_tag_h   vlan_tag;
     ipv4_h       ipv4;
-    calc_h       calc;
-    arp_h   arp;
 }
 
 
@@ -131,13 +129,9 @@ parser SwitchIngressParser(
 
     state parse_ipv4 {
         packet.extract(hdr.ipv4);
-        transition parse_calc;
-    }
-
-    state parse_calc {
-        packet.extract(hdr.calc);
         transition accept;
     }
+
 }
 
 
@@ -261,7 +255,7 @@ control SwitchIngress(
             if(queue_action.execute(md.qID)==0){
 
                 // drop the packet, the queue is full
-                ig_intr_dprsr_md.drop_ctl = 0x1;            
+                //ig_intr_dprsr_md.drop_ctl = 0x1;            
             }
 
         }
