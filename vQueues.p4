@@ -17,7 +17,7 @@ const ether_type_t ETHERTYPE_IPV6 = 16w0x86dd;
 const ether_type_t ETHERTYPE_VLAN = 16w0x8100;
 
 
-const ether_type_t ETHERTYPE_VQ = 16w0x4002
+const ether_type_t ETHERTYPE_VQ = 16w0x4002;
 
     /***********************  H E A D E R S  ************************/
 
