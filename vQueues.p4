@@ -108,7 +108,6 @@ parser SwitchIngressParser(
         transition select(hdr.ethernet.ether_type) {
             ETHERTYPE_IPV4:  parse_ipv4;
             ETHERTYPE_VLAN:  parse_vlan;
-            ETHERTYPE_ARP:  parse_arp;
             default: accept;
         }
     }
@@ -117,14 +116,8 @@ parser SwitchIngressParser(
         packet.extract(hdr.vlan_tag);
         transition select(hdr.vlan_tag.ether_type) {
             ETHERTYPE_IPV4:  parse_ipv4;
-            ETHERTYPE_ARP:  parse_arp;
             default: accept;
         }
-    }
-
-    state parse_arp {
-        packet.extract(hdr.arp);
-        transition accept;
     }
 
     state parse_ipv4 {
