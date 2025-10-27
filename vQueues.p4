@@ -101,7 +101,7 @@ parser SwitchIngressParser(
     state start {
         packet.extract(ig_intr_md);
         packet.advance(PORT_METADATA_SIZE);
-        pktgen_timer_header_t pktgen_pd_hdr = packet.lookahead<pktgen_timer_header_t>();
+        //pktgen_timer_header_t pktgen_pd_hdr = packet.lookahead<pktgen_timer_header_t>();
         transition parse_ethernet;
     }
 
