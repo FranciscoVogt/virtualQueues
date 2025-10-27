@@ -248,7 +248,7 @@ control SwitchIngress(
             if(queue_action.execute(md.qID)==0){
 
                 // drop the packet, the queue is full
-                //ig_intr_dprsr_md.drop_ctl = 0x1;            
+                ig_intr_dprsr_md.drop_ctl = 0x1;            
             }
 
         }
