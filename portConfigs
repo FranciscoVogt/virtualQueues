@@ -1,0 +1,10 @@
+ucli
+pm
+port-add 5/- 100G NONE
+port-enb 5/-
+an-set 5/- 2 
+port-dis 5/-
+port-enb 5/-
+show
+rate-period 1
+rate-show
