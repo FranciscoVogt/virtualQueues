@@ -176,11 +176,11 @@ control SwitchIngress(
 
     
 
-    Register <bit<32>, bit<10>> (32w1024)  vQueue;
+    Register <bit<32>, bit<32>> (32w1024)  vQueue;
 
 
     // action that read the queue depth, and decides if the packet can pass the queue or not
-    RegisterAction<bit<32>, bit<10>, bit<1>>(vQueue) queue_action = {
+    RegisterAction<bit<32>, bit<32>, bit<1>>(vQueue) queue_action = {
         void apply(inout bit<32> value, out bit<1> readvalue){
             
             // check if the queue has limit remaining, if yes, return 1 and increase the queue size, if not, return 0
@@ -194,7 +194,7 @@ control SwitchIngress(
     };
 
     // action to update the queue lenght with the generated packets
-    RegisterAction<bit<32>, bit<10>, bit<1>>(vQueue) queue_update = {
+    RegisterAction<bit<32>, bit<32>, bit<1>>(vQueue) queue_update = {
         void apply(inout bit<32> value, out bit<1> readvalue){
             
             value = 0;
