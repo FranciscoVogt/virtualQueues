@@ -259,7 +259,7 @@ control SwitchIngress(
         else{
 
             //update the queue depth. In this first version just turn it 0
-            queue_update.execute(bit<32>(md.pID));
+            queue_update.execute((bit<32>)(md.pID));
 
         }
 
