@@ -64,7 +64,7 @@ p = testutils.simple_eth_packet(pktlen=pktlen)
 
 # Configure the packet generation timer application
 print("configure pktgen application")
-data = pktgen_app_cfg_table.make_data([gc.DataTuple('timer_nanosec', 1000000000),
+data = pktgen_app_cfg_table.make_data([gc.DataTuple('timer_nanosec', 0),
                                 gc.DataTuple('app_enable', bool_val=False),
                                 gc.DataTuple('pkt_len', (pktlen - 6)),
                                 gc.DataTuple('pkt_buffer_offset', buff_offset),
@@ -72,12 +72,12 @@ data = pktgen_app_cfg_table.make_data([gc.DataTuple('timer_nanosec', 1000000000)
                                 gc.DataTuple('increment_source_port', bool_val=False),
                                 gc.DataTuple('batch_count_cfg', b_count - 1),
                                 gc.DataTuple('packets_per_batch_cfg', p_count - 1),
-                                gc.DataTuple('ibg', 0),
+                                gc.DataTuple('ibg', 1000000000),
                                 gc.DataTuple('ibg_jitter', 0),
                                 gc.DataTuple('ipg', 0),
                                 gc.DataTuple('ipg_jitter', 0),
                                 gc.DataTuple('batch_counter', 0),
-                                gc.DataTuple('pkt_counter', 0),
+                                gc.DataTuple('pkt_counter', 999),
                                 gc.DataTuple('trigger_counter', 0)],
                                 'trigger_timer_periodic')
 pktgen_app_cfg_table.entry_mod(

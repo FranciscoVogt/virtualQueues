@@ -82,6 +82,8 @@ struct my_ingress_metadata_t {
     bit<32>  qID;
     bit<32>  vQueueLimit;
 
+    bit<16> pID;
+
 }
 
 
@@ -99,7 +101,8 @@ parser SwitchIngressParser(
     state start {
         packet.extract(ig_intr_md);
         packet.advance(PORT_METADATA_SIZE);
-        //pktgen_timer_header_t pktgen_pd_hdr = packet.lookahead<pktgen_timer_header_t>();
+        pktgen_timer_header_t pktgen_pd_hdr = packet.lookahead<pktgen_timer_header_t>();
+        md.pID = pktgen_pd_hdr.packet_id;
         transition parse_ethernet;
     }
 
@@ -256,7 +259,7 @@ control SwitchIngress(
         else{
 
             //update the queue depth. In this first version just turn it 0
-            queue_update.execute(5);
+            queue_update.execute(md.pID);
 
         }
 
