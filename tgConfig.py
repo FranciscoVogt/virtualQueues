@@ -29,7 +29,7 @@ target = gc.Target(device_id=0, pipe_id=0xffff)
 
 
 print("configure timer table")
-pipe_id = 0
+pipe_id = 1
 g_timer_app_id = 0
 batch_id = [0,1,2,3] # 0,1,2,3
 packet_id = [0,1] # 0,1
@@ -41,7 +41,7 @@ pktgen_port_cfg_table = bfrt_info.table_get("port_cfg")
 
 app_id = g_timer_app_id
 pktlen = 64
-pgen_pipe_id = 0
+pgen_pipe_id = 1
 src_port = 68
 p_count = 1  # packets per batch
 b_count = 1  # batch number
@@ -64,7 +64,7 @@ p = testutils.simple_eth_packet(pktlen=pktlen)
 
 # Configure the packet generation timer application
 print("configure pktgen application")
-data = pktgen_app_cfg_table.make_data([gc.DataTuple('timer_nanosec', 0),
+data = pktgen_app_cfg_table.make_data([gc.DataTuple('timer_nanosec', 1),
                                 gc.DataTuple('app_enable', bool_val=False),
                                 gc.DataTuple('pkt_len', (pktlen - 6)),
                                 gc.DataTuple('pkt_buffer_offset', buff_offset),
