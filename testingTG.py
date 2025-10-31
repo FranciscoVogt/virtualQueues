@@ -25,6 +25,7 @@ print('The target runs program ', bfrt_info.p4_name_get())
 interface.bind_pipeline_config(bfrt_info.p4_name_get())
 
 ####### You can now use BFRT CLIENT #######
+#target = gc.Target(device_id=0, pipe_id=0xffff)
 target = gc.Target(device_id=0, pipe_id=0xffff)
 
 
@@ -43,7 +44,7 @@ app_id = g_timer_app_id
 pktlen = 64
 pgen_pipe_id = 1
 src_port = 68
-p_count = 1  # packets per batch
+p_count = 10  # packets per batch
 b_count = 1  # batch number
 buff_offset = 144  # generated packets payload will be taken from the offset in buffer
 
@@ -53,22 +54,26 @@ p = testutils.simple_ipv4ip_packet(pktlen=pktlen)
 
 print("enable pktgen port")
 
+
 pktgen_port_cfg_table.entry_mod(
 target,
-[pktgen_port_cfg_table.make_key([gc.KeyTuple('dev_port', src_port)])],
+[pktgen_port_cfg_table.make_key([gc.KeyTuple('dev_port', 196)])],
 [pktgen_port_cfg_table.make_data([gc.DataTuple('pktgen_enable', bool_val=True)])])
 
-app_id = 1
-pktlen = 64
+
+
+
+app_id = 3
+pktlen = 164
 p = testutils.simple_eth_packet(pktlen=pktlen)
 
 # Configure the packet generation timer application
 print("configure pktgen application")
-data = pktgen_app_cfg_table.make_data([gc.DataTuple('timer_nanosec', 1),
+data = pktgen_app_cfg_table.make_data([gc.DataTuple('timer_nanosec', 1000000000),
                                 gc.DataTuple('app_enable', bool_val=False),
                                 gc.DataTuple('pkt_len', (pktlen - 6)),
                                 gc.DataTuple('pkt_buffer_offset', buff_offset),
-                                gc.DataTuple('pipe_local_source_port', src_port),
+                                gc.DataTuple('pipe_local_source_port', 68),
                                 gc.DataTuple('increment_source_port', bool_val=False),
                                 gc.DataTuple('batch_count_cfg', b_count - 1),
                                 gc.DataTuple('packets_per_batch_cfg', p_count - 1),
@@ -76,8 +81,8 @@ data = pktgen_app_cfg_table.make_data([gc.DataTuple('timer_nanosec', 1),
                                 gc.DataTuple('ibg_jitter', 0),
                                 gc.DataTuple('ipg', 0),
                                 gc.DataTuple('ipg_jitter', 0),
-                                gc.DataTuple('batch_counter', 0),
-                                gc.DataTuple('pkt_counter', 10),
+                                gc.DataTuple('batch_counter', 1),
+                                gc.DataTuple('pkt_counter', 0),
                                 gc.DataTuple('trigger_counter', 0)],
                                 'trigger_timer_periodic')
 pktgen_app_cfg_table.entry_mod(

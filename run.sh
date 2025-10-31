@@ -13,6 +13,10 @@ bf_kdrv_mod_load $SDE_INSTALL
 
 sleep 30
 
+#Config PORTS
+/$SDE/run_bfshell.sh -f portConfigs 
+
+
 
 #Config Tables, Registers etc
 /$SDE/run_bfshell.sh -b controlPlane.py 
@@ -20,10 +24,17 @@ sleep 30
 sleep 10
 
 #Install rules for traffic generation
-nohup python3 tgConfig.py > log &
+
+«
+
+
+
+python3 testingTG.py > log &
+
 
 #Config PORTS
 /$SDE/run_bfshell.sh -f portConfigs 
+
 
 
 

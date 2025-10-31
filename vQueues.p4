@@ -236,10 +236,10 @@ control SwitchIngress(
     apply {
 
 
-        if (ig_intr_md.ingress_port == 68 ){ig_intr_tm_md.ucast_egress_port = 196;}
+        //if (ig_intr_md.ingress_port == 68 ){ig_intr_tm_md.ucast_egress_port = 196;}
 
         // production packets, vQueues should be applied
-        else if (ig_intr_md.ingress_port != 68 && ig_intr_md.ingress_port != 196){
+        if (ig_intr_md.ingress_port != 196){
         
             // decides output port and gets the vQueue ID
             forward.apply();
@@ -256,10 +256,16 @@ control SwitchIngress(
 
         }
         // generation packets, vQueues should be updated
-        else{
+        else if (ig_intr_md.ingress_port == 196){
 
+            
             //update the queue depth. In this first version just turn it 0
             queue_update.execute((bit<32>)(md.pID));
+
+            //queue_update.execute(5);
+
+
+            //ig_intr_tm_md.ucast_egress_port = 134;
 
         }
 
