@@ -25,15 +25,11 @@ sleep 10
 
 #Install rules for traffic generation
 
-«
-
-
-
-python3 testingTG.py > log &
+python3 testingTG.py
 
 
 #Config PORTS
-/$SDE/run_bfshell.sh -f portConfigs 
+/$SDE/run_bfshell.sh -f view
 
 
 
