@@ -1,5 +1,8 @@
 #include <tna.p4>
 
+#include "byteCount.p4"
+//#include "saveInfo.p4"
+
 /*************************************************************************
  ************* C O N S T A N T S    A N D   T Y P E S  *******************
 **************************************************************************/
@@ -18,6 +21,8 @@ const ether_type_t ETHERTYPE_VLAN = 16w0x8100;
 
 
 const ether_type_t ETHERTYPE_VQ = 16w0x4002;
+
+const ether_type_t ETHERTYPE_MONITOR = 0x1234;
 
     /***********************  H E A D E R S  ************************/
 
@@ -66,11 +71,43 @@ header arp_h {
     bit<32> dest_ip;
 }
 
+
+
+header monitor_inst_h {
+	 bit<32> index_flow; // index of the flow to collect the informations
+	 bit<32> index_port; // index of the port to collect the informations
+	 bit<9> port;		// port to forward the packet
+	 bit<7> padding;
+}//10 bytes
+
+header monitor_h {
+	bit<64> bytes_flow;
+	bit<64> bytes_port;
+	bit<48> timestamp;
+	bit<9> port;
+	bit<7> padding;
+	bit<16> pktLen;
+
+
+	bit<32> qID_port;
+	bit<32> qDepth_port;
+	bit<32> qTime_port;
+
+
+	bit<32> qID_flow;
+	bit<32> qDepth_flow;
+	bit<32> qTime_flow;
+
+}
+
+
 struct headers {
     pktgen_timer_header_t timer;
     ethernet_h   ethernet;
     vlan_tag_h   vlan_tag;
+    monitor_inst_h 			mon_inst;
     ipv4_h       ipv4;
+    monitor_h				monitor;
 }
 
 
@@ -83,9 +120,14 @@ struct my_ingress_metadata_t {
     bit<32>  vQueueLimit;
 
     bit<16> pID;
-
 }
 
+
+struct my_egress_metadata_t {
+	bit<32> qID;
+	bit<32> qDepth;
+	bit<32> qTime;
+}
 
 /*************************************************************************
  **************  I N G R E S S   P R O C E S S I N G   *******************
@@ -111,9 +153,15 @@ parser SwitchIngressParser(
         transition select(hdr.ethernet.ether_type) {
             ETHERTYPE_IPV4:  parse_ipv4;
             ETHERTYPE_VLAN:  parse_vlan;
+            ETHERTYPE_MONITOR: parse_monitor;
             default: accept;
         }
     }
+
+    state parse_monitor {
+		packet.extract(hdr.mon_inst);
+		transition parse_ipv4;
+	}
     
     state parse_vlan {
         packet.extract(hdr.vlan_tag);
@@ -269,10 +317,261 @@ control SwitchIngress(
 
         }
 
-        ig_intr_tm_md.bypass_egress = 1w1;
+        //ig_intr_tm_md.bypass_egress = 1w1;
 
     }
 }
+
+
+// egress monitoring part
+
+parser SwitchEgressParser(
+	packet_in packet,
+	out headers hdr,
+	out my_egress_metadata_t eg_md,
+	out egress_intrinsic_metadata_t eg_intr_md) {
+	
+	state start {
+		packet.extract(eg_intr_md);
+		transition parse_ethernet;
+	}
+	
+	state parse_ethernet {
+		packet.extract(hdr.ethernet);
+		transition select(hdr.ethernet.ether_type) {
+			ETHERTYPE_IPV4:  parse_ipv4;
+			ETHERTYPE_VLAN:  parse_vlan;
+			ETHERTYPE_MONITOR: parse_monitor;
+			default: accept;
+		}
+	}
+
+	state parse_monitor {
+		packet.extract(hdr.mon_inst);
+        packet.extract(hdr.ipv4);
+		packet.extract(hdr.monitor);	// I extract to use the empty size in the packet
+		transition accept;
+	
+	}
+
+	state parse_vlan {
+		packet.extract(hdr.vlan_tag);
+		transition select(hdr.vlan_tag.ether_type) {
+			ETHERTYPE_IPV4:  parse_ipv4;
+			default: accept;
+		}
+	}
+	
+	state parse_ipv4 {
+		packet.extract(hdr.ipv4);
+		transition accept;
+	}
+}
+
+
+control SwitchEgress(
+	inout headers hdr,
+	inout my_egress_metadata_t eg_md,
+	in egress_intrinsic_metadata_t eg_intr_md,
+	in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
+	inout egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
+	inout egress_intrinsic_metadata_for_output_port_t eg_intr_oport_md) {
+	
+
+	Add_64_64(4096) byte_count_port;
+	Add_64_64(4096) byte_count_flow;
+	
+	//Store_info(4096) store_info_port;
+	//Store_info(4096) store_info_flow;
+	
+
+	//hashing for flows
+	Hash<bit<12>>(HashAlgorithm_t.CRC32) hTableIndex;
+
+	bit<32> flowIndex;
+	bit<32> portIndex;
+
+	bit<32> qID;
+	bit<32> qDepth;
+	bit<32> qTime;
+
+
+
+	bit<64> dummy = 0;
+		
+	//bit<32> wri
+
+	bit<32> d1=0;
+	bit<32> d2=0;
+	bit<32> d3=0;
+
+
+	//tentando
+
+	/* save the queueID that packet passes (flow saving) */
+	Register<bit<32>, reg_index_t>(4096) reg_queueID_flow;
+	RegisterAction<bit<32>, reg_index_t, bit<32>>(reg_queueID_flow) write_id_flow = {
+		void apply(inout bit<32> value, out bit<32> result) {			
+			value = eg_md.qID;
+		}
+	};
+	
+	RegisterAction<bit<32>, reg_index_t, bit<32>>(reg_queueID_flow) read_id_flow = {
+		void apply(inout bit<32> value, out bit<32> result) {
+			value = eg_md.qID; //comentar			
+			result = value;
+		}
+	};
+	
+	/* save the dequeue depth that packet passes (flow saving)*/
+	Register<bit<32>, reg_index_t>(4096) reg_queueDepth_flow;
+	RegisterAction<bit<32>, reg_index_t, bit<32>>(reg_queueDepth_flow) write_depth_flow = {
+		void apply(inout bit<32> value, out bit<32> result) {		
+			value = eg_md.qDepth;
+		}
+	};
+
+	RegisterAction<bit<32>, reg_index_t, bit<32>>(reg_queueDepth_flow) read_depth_flow = {
+		void apply(inout bit<32> value, out bit<32> result) {
+			value = eg_md.qDepth; //comentar		
+			result = value;
+		}
+	};
+	
+	/* save the queue time that packet passes (flow saving)*/
+	Register<bit<32>, reg_index_t>(4096) reg_Time_flow;
+	RegisterAction<bit<32>, reg_index_t, bit<32>>(reg_Time_flow) write_time_flow = {
+		void apply(inout bit<32> value, out bit<32> result) {		
+			value = eg_md.qTime;
+		}
+	};
+
+	RegisterAction<bit<32>, reg_index_t, bit<32>>(reg_Time_flow) read_time_flow = {
+		void apply(inout bit<32> value, out bit<32> result) {
+			value = eg_md.qTime;//comentar		
+			result = value;
+		}
+	};
+	
+	//----------------------------------------------------------------------------------------
+
+	/* save the queueID that packet passes (port saving) */
+	Register<bit<32>, reg_index_t>(4096) reg_queueID_port;
+	RegisterAction<bit<32>, reg_index_t, bit<32>>(reg_queueID_port) write_id_port = {
+		void apply(inout bit<32> value, out bit<32> result) {			
+			value = eg_md.qID;
+		}
+	};
+	
+	RegisterAction<bit<32>, reg_index_t, bit<32>>(reg_queueID_port) read_id_port = {
+		void apply(inout bit<32> value, out bit<32> result) {
+			value = eg_md.qID;//comentar			
+			result = value;
+		}
+	};
+	
+	/* save the dequeue depth that packet passes (port saving)*/
+	Register<bit<32>, reg_index_t>(4096) reg_queueDepth_port;
+	RegisterAction<bit<32>, reg_index_t, bit<32>>(reg_queueDepth_port) write_depth_port = {
+		void apply(inout bit<32> value, out bit<32> result) {		
+			value = eg_md.qDepth;
+		}
+	};
+
+	RegisterAction<bit<32>, reg_index_t, bit<32>>(reg_queueDepth_port) read_depth_port = {
+		void apply(inout bit<32> value, out bit<32> result) {
+			value = eg_md.qDepth; //cmentar		
+			result = value;
+		}
+	};
+	
+	/* save the queue time that packet passes (port saving)*/
+	Register<bit<32>, reg_index_t>(4096) reg_Time_port;
+	RegisterAction<bit<32>, reg_index_t, bit<32>>(reg_Time_port) write_time_port = {
+		void apply(inout bit<32> value, out bit<32> result) {		
+			value = eg_md.qTime;
+		}
+	};
+
+	RegisterAction<bit<32>, reg_index_t, bit<32>>(reg_Time_port) read_time_port = {
+		void apply(inout bit<32> value, out bit<32> result) {
+			value = eg_md.qTime; // comentar		
+			result = value;
+		}
+	};
+
+	apply {
+	
+	
+		bit<64> l_1 = 0;
+		l_1 = (bit<64>)(eg_intr_md.pkt_length);
+		//take the indexes
+			
+
+			eg_md.qID = (bit<32>)(eg_intr_md.egress_qid);
+			eg_md.qDepth = (bit<32>)(eg_intr_md.deq_qdepth);
+			eg_md.qTime = (bit<32>)(eg_intr_md.enq_tstamp);
+		
+		flowIndex = (bit<32>)(hTableIndex.get({hdr.ipv4.src_addr, hdr.ipv4.dst_addr})); 
+		portIndex = (bit<32>)(eg_intr_md.egress_port);
+
+		//collect the information	
+		if(hdr.monitor.isValid()){
+			hdr.monitor.timestamp = eg_intr_md_from_prsr.global_tstamp;
+			hdr.monitor.port = eg_intr_md.egress_port;
+			hdr.monitor.pktLen = eg_intr_md.pkt_length;
+			
+			//byte_count_port.apply(hdr.monitor.bytes, l_1, (bit<32>)eg_intr_md.egress_port);
+			byte_count_port.apply(hdr.monitor.bytes_port, 0, hdr.mon_inst.index_port);
+			
+			byte_count_flow.apply(hdr.monitor.bytes_flow, 0, hdr.mon_inst.index_flow);
+
+			//nova tentativa
+			hdr.monitor.qID_flow = read_id_flow.execute(hdr.mon_inst.index_flow);
+			hdr.monitor.qDepth_flow = read_depth_flow.execute(hdr.mon_inst.index_flow);
+			hdr.monitor.qTime_flow = read_time_flow.execute(hdr.mon_inst.index_flow);
+		
+			hdr.monitor.qID_port = read_id_port.execute(hdr.mon_inst.index_port);
+			hdr.monitor.qDepth_port =read_depth_port.execute(hdr.mon_inst.index_port);
+			hdr.monitor.qTime_port = read_time_port.execute(hdr.mon_inst.index_port);
+			
+		}
+		//calculate the information
+		else{
+		
+			
+			//calculate bytes per flow and per port
+			
+			byte_count_port.apply(dummy, l_1, portIndex);
+			byte_count_flow.apply(dummy, l_1, flowIndex);			
+
+			// save other information per flow and per port
+			write_id_flow.execute(flowIndex);
+			write_depth_flow.execute(flowIndex);
+			write_time_flow.execute(flowIndex);
+	
+			write_time_port.execute(portIndex);
+			write_depth_port.execute(portIndex);
+			write_time_port.execute(portIndex);
+	
+		
+		
+		}
+	}
+}
+
+
+control SwitchEgressDeparser(
+	packet_out pkt,
+	inout headers hdr,
+	in my_egress_metadata_t eg_md,
+	in egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md) {
+		
+	apply {
+		pkt.emit(hdr);
+	}
+}
+
 
 
 // Empty egress parser/control blocks
@@ -309,8 +608,8 @@ control EmptyEgress(
 Pipeline(SwitchIngressParser(),
          SwitchIngress(),
          SwitchIngressDeparser(),
-         EmptyEgressParser(),
-         EmptyEgress(),
-         EmptyEgressDeparser()) pipe;
+         SwitchEgressParser(),
+         SwitchEgress(),
+         SwitchEgressDeparser()) pipe;
 
 Switch(pipe) main;
