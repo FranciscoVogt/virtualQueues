@@ -21,6 +21,8 @@ Example of usage:
 sudo python3 monitor_throughput.py --mode both --send-if enp6s0f0 --recv-if enp6s0f1 --file instruc.txt
 ```
 
+In this case I'm sending and receiving the monitoring packets on the same server (that has two interfaces connecetd to the switch). You can also run it in different servers, as explained below.
+
 > **Parameters:**
 
 | Parameter   | Default      | Description                                                                                                                                                                                                                                                                                                     |
